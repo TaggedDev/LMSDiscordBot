@@ -11,6 +11,7 @@ using Google.Apis.Classroom.v1;
 using Google.Apis.Classroom.v1.Data;
 using Google.Apis.Services;
 using Bot.Services;
+using Bot.Modules;
 
 namespace Bot.Modules
 {
@@ -105,21 +106,48 @@ namespace Bot.Modules
         }
 
         [Command("add_user")]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Add(string id, SocketGuildUser user)
         {
-            await Context.Channel.SendMessageAsync("Привет");
+            Course course;
+            course = ClassroomHandler.findCourseById(id);
+            var role = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
+            if (role == null)
+            {
+                await Context.Channel.SendMessageAsync($":warning: Роль для класса {course.Name} не найдена, будет создана новая");
+                await Context.Guild.CreateRoleAsync(course.Name, null, null, false, null);
+                role = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
+            }
+            await (user as IGuildUser).AddRoleAsync(role);
+            await Context.Channel.SendMessageAsync($":white_check_mark: Роль **{course.Name}** успешно выдана {user.Mention}");
         }
 
         [Command("remove_user")]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Remove(string id, SocketGuildUser user)
         {
-            await Context.Channel.SendMessageAsync("Привет");
+            Course course;
+            course = ClassroomHandler.findCourseById(id);
+            bool role = user.Roles.Any(r => r.Name == $"{course.Name}");
+            Console.WriteLine(role);
+            if (!role)
+            {
+                // The check doesn't work but the command works fine
+                await Context.Channel.SendMessageAsync($":warning: У пользователя **{user.Nickname}#{user.Discriminator}** нет роли **{course.Name}**.");
+            } 
+            else 
+            {             
+                var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
+                await user.RemoveRoleAsync(removerole);
+                await Context.Channel.SendMessageAsync($":white_check_mark: У пользователя **{user.Nickname}#{user.Discriminator}** удалена роль **{course.Name}**.");
+            }
         }
 
-        [Command("purge_class")]
-        public async Task PurgeClass(string id)
+        [Command("createclass")]
+        public async Task CreateClass()
         {
-            await Context.Channel.SendMessageAsync("Привет");
+            ClassroomHandler.CreateClass();
+            await Context.Channel.SendMessageAsync("Готово.");
         }
 
         [Command("class")]
