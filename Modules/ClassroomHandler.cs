@@ -17,7 +17,7 @@ namespace Bot.Modules
     class ClassroomHandler
     {
         public static List<Course> courseArray = new List<Course>();
-        public static string[] Scopes = { ClassroomService.Scope.ClassroomCourses }; //.ClassroomCoursesReadonly
+        public static string[] Scopes = { ClassroomService.Scope.ClassroomCourses, ClassroomService.Scope.ClassroomCourseworkMe, ClassroomService.Scope.ClassroomAnnouncements }; //.ClassroomCoursesReadonly
         public static string ApplicationName = "Quickstart";
         private static UserCredential credential;
 
@@ -72,7 +72,7 @@ namespace Bot.Modules
             CourseCount(response);
         }
 
-        public static void CreateClass()
+        public static void CreateClass(string name, string section, string descriptionHeading, string description, string room)
         {
             UpdateClassroom();
             Console.WriteLine("Updated");
@@ -86,13 +86,11 @@ namespace Bot.Modules
 
             var course = new Course
             {
-                Name = "10th Grade Biology",
-                Section = "Period 2",
-                DescriptionHeading = "Welcome to 10th Grade Biology",
-                Description = "We'll be learning about about the structure of living creatures "
-                    + "from a combination of textbooks, guest lectures, and lab work. Expect "
-                    + "to be excited!",
-                Room = "301",
+                Name = name,
+                Section = section,
+                DescriptionHeading = descriptionHeading,
+                Description = description,
+                Room = room,
                 OwnerId = "me",
                 CourseState = "PROVISIONED"
             };
@@ -128,6 +126,19 @@ namespace Bot.Modules
             return foundCourse;
         }
 
+        public static Course findCourseByName(string name)
+        {
+            UpdateClassroom();
+            foreach(Course course in courseArray)
+            {
+                if (course.Name.Equals(name))
+                {
+                    return course;
+                }
+            }
+            return courseArray[0];
+        }
+
         public static List<Course> GetCourses()
         {
             UpdateClassroom();
@@ -139,5 +150,7 @@ namespace Bot.Modules
             UpdateClassroom();
             return findCourseById(id);
         }
+
+        
     }
 }

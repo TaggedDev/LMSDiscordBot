@@ -17,13 +17,8 @@ namespace Bot.Modules
 {
     public class Main : ModuleBase
     {
-        [Command("ping")]
-        public async Task Ping()
-        {
-            await Context.Channel.SendMessageAsync($"Pong in {Context.Channel.Name}!");
-        }
-
         [Command("courses")]
+        [Alias("cinfo", "courseinfo", "courselist", "list", "classes")]
         public async Task Courses()
         {
             List<Course> courseArray = new List<Course>();
@@ -60,6 +55,7 @@ namespace Bot.Modules
         }
 
         [Command("info")]
+        [Alias("information", "account")]
         public async Task Info(SocketGuildUser user = null)
         {
             if (user == null)
@@ -98,6 +94,7 @@ namespace Bot.Modules
         }
 
         [Command("purge")]
+        [Alias("clear", "delete")]
         [RequireUserPermission(GuildPermission.ManageMessages)]
         public async Task Purge(int amount)
         {
@@ -106,6 +103,7 @@ namespace Bot.Modules
         }
 
         [Command("add_user")]
+        [Alias("a_u", "au", "add_usr", "a_usr", "adduser", "auser", "ausr")]
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Add(string id, SocketGuildUser user)
         {
@@ -114,7 +112,7 @@ namespace Bot.Modules
             var role = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
             if (role == null)
             {
-                await Context.Channel.SendMessageAsync($":warning: Роль для класса {course.Name} не найдена, будет создана новая");
+                await Context.Channel.SendMessageAsync($":warning: Роль для класса **{course.Name}** не найдена, будет создана новая");
                 await Context.Guild.CreateRoleAsync(course.Name, null, null, false, null);
                 role = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
             }
@@ -123,34 +121,49 @@ namespace Bot.Modules
         }
 
         [Command("remove_user")]
+        [Alias("r_u", "ru", "rem_user", "remove_user", "remove_usr", "removeuser", "reomve_user", "remove_usre")]
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Remove(string id, SocketGuildUser user)
         {
             Course course;
             course = ClassroomHandler.findCourseById(id);
-            bool role = user.Roles.Any(r => r.Name == $"{course.Name}");
-            Console.WriteLine(role);
-            if (!role)
+            var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}")); //bool role = user.Roles.Any(r => r.Name == course.Name);
+            if (!(user.Roles.Any(r => r.Name == course.Name)))
             {
                 // The check doesn't work but the command works fine
-                await Context.Channel.SendMessageAsync($":warning: У пользователя **{user.Nickname}#{user.Discriminator}** нет роли **{course.Name}**.");
+                await Context.Channel.SendMessageAsync($":warning: У пользователя **{user.Mention}** нет роли **{course.Name}**.");
             } 
             else 
             {             
-                var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
+                //var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
                 await user.RemoveRoleAsync(removerole);
                 await Context.Channel.SendMessageAsync($":white_check_mark: У пользователя **{user.Nickname}#{user.Discriminator}** удалена роль **{course.Name}**.");
             }
         }
 
-        [Command("createclass")]
-        public async Task CreateClass()
+        [Command("create_class")]
+        [Alias("c_c", "cc", "cl", "create_c", "c_class")]
+        public async Task CreateClass(string name, string section = "Section", string descriptionHeading = "Description heading", string description = "Description", string room = "Room")
         {
-            ClassroomHandler.CreateClass();
-            await Context.Channel.SendMessageAsync("Готово.");
+            ClassroomHandler.CreateClass(name, section, descriptionHeading, description, room);
+            Course thisCourse = ClassroomHandler.findCourseByName(name);
+            var builder = new EmbedBuilder()
+                .WithTitle($"**:tada: Создан новый класс!**")
+                .WithDescription($":teacher: Создана пользователем {Context.Message.Author.Mention}")
+                .AddField($":classical_building: Название:", thisCourse.Name)
+                .AddField($":trophy: Раздел:", thisCourse.Section)
+                .AddField($":placard: Заголовок описания", thisCourse.DescriptionHeading)
+                .AddField($":bookmark_tabs: Описание:", thisCourse.Description)
+                .AddField($":door: Комната:", thisCourse.Room)
+                .AddField($":id: ID:", thisCourse.Id)
+                .WithColor(0x008F00)
+                .WithCurrentTimestamp();
+            var embed = builder.Build();
+            await Context.Channel.SendMessageAsync(null, false, embed);
         }
 
         [Command("class")]
+        [Alias("classinfo", "classembed", "classs")]
         public async Task Class(string id)
         {
             Course myCourse = ClassroomHandler.ClassInformation(id);
@@ -166,28 +179,13 @@ namespace Bot.Modules
         }
 
         [Command("connect")]
+        [Alias("cnnnct", "update", "reconnect")]
         public async Task Connect()
         {
             ClassroomHandler.ConnectClassroom();
             await Context.Channel.SendMessageAsync("Подключение обновлено");
         }
 
-        /*[Command("mute")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        [RequireBotPermission(GuildPermission.ManageRoles)]
-        public async Task Mute(SocketGuildUser user, int seconds, [Remainder]string reason = null)
-        {
-            if (Context.User.Username.Equals(""))
-            {
-                await Context.Channel.SendMessageAsync("Invalid User");
-            }
-
-            var role = (Context.Guild as IGuild).Roles.FirstOrDefault(x => x.Name == "Muted");
-            if (role == null)
-                role = await Context.Guild.CreateRoleAsync("Заглушен", new GuildPermissions(sendMessages: false), null, false, null);
-
-            
-            
-        }*/
+        
     }
 }
