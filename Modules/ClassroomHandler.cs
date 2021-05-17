@@ -17,7 +17,7 @@ namespace Bot.Modules
     class ClassroomHandler
     {
         public static List<Course> courseArray = new List<Course>();
-        public static string[] Scopes = { ClassroomService.Scope.ClassroomCourses, ClassroomService.Scope.ClassroomCourseworkMe, ClassroomService.Scope.ClassroomAnnouncements }; //.ClassroomCoursesReadonly
+        public static string[] Scopes = { ClassroomService.Scope.ClassroomCourses , ClassroomService.Scope.ClassroomCourseworkMe, ClassroomService.Scope.ClassroomAnnouncements, ClassroomService.Scope.ClassroomCourseworkStudents }; //.ClassroomCoursesReadonly
         public static string ApplicationName = "Quickstart";
         private static UserCredential credential;
 
@@ -151,6 +151,24 @@ namespace Bot.Modules
             return findCourseById(id);
         }
 
-        
+        public static void SendHomework(string courseID, string title, string descr)
+        {
+            UpdateClassroom();
+            var service = new ClassroomService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = ApplicationName,
+            });
+            CourseWork body = new CourseWork()
+            {
+                Title = title,
+                Description = descr,
+                WorkType = "ASSIGNMENT",
+                State = "PUBLISHED",
+            };
+
+            var coursework = service.Courses.CourseWork.Create(body, courseID).Execute();
+            Console.WriteLine($"done: with {coursework.Id}");
+        }
     }
 }

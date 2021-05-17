@@ -18,6 +18,7 @@ namespace Bot.Modules
     public class Main : ModuleBase
     {
         [Command("courses")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         [Alias("cinfo", "courseinfo", "courselist", "list", "classes")]
         public async Task Courses()
         {
@@ -96,17 +97,29 @@ namespace Bot.Modules
         [Command("purge")]
         [Alias("clear", "delete")]
         [RequireUserPermission(GuildPermission.ManageMessages)]
-        public async Task Purge(int amount)
+        public async Task Purge(int amount = 1)
         {
             var messages = await Context.Channel.GetMessagesAsync(amount + 1).FlattenAsync();
             await (Context.Channel as SocketTextChannel).DeleteMessagesAsync(messages);
         }
 
         [Command("add_user")]
+        [RequireUserPermission(GuildPermission.Administrator)]
         [Alias("a_u", "au", "add_usr", "a_usr", "adduser", "auser", "ausr")]
         [RequireUserPermission(GuildPermission.ManageRoles)]
-        public async Task Add(string id, SocketGuildUser user)
+        public async Task Add(string id = null, SocketGuildUser user = null)
         {
+            if (id == null)
+            {
+                await Context.Channel.SendMessageAsync(":x: Укажите ID класса");
+                return;
+            }
+            if (user == null)
+            {
+                await Context.Channel.SendMessageAsync(":x: Укажите пользователя через @");
+                return;
+            }
+                
             Course course;
             course = ClassroomHandler.findCourseById(id);
             var role = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
@@ -125,26 +138,47 @@ namespace Bot.Modules
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task Remove(string id, SocketGuildUser user)
         {
+
+            if (id == null)
+            {
+                await Context.Channel.SendMessageAsync(":x: Укажите ID класса");
+                return;
+            }
+            if (user == null)
+            {
+                await Context.Channel.SendMessageAsync(":x: Укажите пользователя через @");
+                return;
+            }
+
             Course course;
             course = ClassroomHandler.findCourseById(id);
             var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}")); //bool role = user.Roles.Any(r => r.Name == course.Name);
-            if (!(user.Roles.Any(r => r.Name == course.Name)))
+            foreach (SocketRole role in ((Context.Message.Author) as SocketGuildUser).Roles)
             {
-                // The check doesn't work but the command works fine
-                await Context.Channel.SendMessageAsync($":warning: У пользователя **{user.Mention}** нет роли **{course.Name}**.");
-            } 
-            else 
-            {             
-                //var removerole = Context.Guild.Roles.FirstOrDefault(x => x.Name.Equals($"{course.Name}"));
-                await user.RemoveRoleAsync(removerole);
-                await Context.Channel.SendMessageAsync($":white_check_mark: У пользователя **{user.Nickname}#{user.Discriminator}** удалена роль **{course.Name}**.");
+                if (role.Id == removerole.Id)
+                {
+                    await user.RemoveRoleAsync(removerole);
+                    await Context.Channel.SendMessageAsync($":white_check_mark: У пользователя **{user.Nickname}#{user.Discriminator}** удалена роль **{course.Name}**.");
+                    return;
+                }
+                    
             }
+
+            await Context.Channel.SendMessageAsync($":warning: У пользователя **{user.Mention}** нет роли **{course.Name}**.");
+            
         }
 
         [Command("create_class")]
         [Alias("c_c", "cc", "cl", "create_c", "c_class")]
-        public async Task CreateClass(string name, string section = "Section", string descriptionHeading = "Description heading", string description = "Description", string room = "Room")
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task CreateClass(string name = null, string section = "Предмет", string descriptionHeading = "Описание заголовка", string description = "Описание", string room = "Аудитория")
         {
+            if (name == null)
+            {
+                await ReplyAsync("Вы не задали главное поле, вот порядок аргументов команды (обязательные подчеркнуты): __**Имя комнаты**__,**Предмет**,**Описание заголовка**,**Описание класса**,**Аудитория**,");
+                return;
+            }
+
             ClassroomHandler.CreateClass(name, section, descriptionHeading, description, room);
             Course thisCourse = ClassroomHandler.findCourseByName(name);
             var builder = new EmbedBuilder()
@@ -164,8 +198,14 @@ namespace Bot.Modules
 
         [Command("class")]
         [Alias("classinfo", "classembed", "classs")]
-        public async Task Class(string id)
+        public async Task Class(string id = null)
         {
+            if (id == null)
+            {
+                await ReplyAsync(":x: Вы не указали id класса");
+                return;
+            }
+
             Course myCourse = ClassroomHandler.ClassInformation(id);
             var builder = new EmbedBuilder()
                 .WithTitle(myCourse.Name)
@@ -178,6 +218,24 @@ namespace Bot.Modules
             await Context.Channel.SendMessageAsync(null, false, embed);
         }
 
+        [Command("add_homework")]
+        [Alias("hw", "homework", "classwork", "work", "attach", "attachto", "attach_to")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task Classwork(string id = null, string title = null, string descr = null)
+        {
+            if (id == null)
+            {
+                await ReplyAsync(":x: Вы не указали id класса");
+                return;
+            }
+            if (title == null) title = "Задание";
+            if (descr == null) descr = "";
+
+
+            ClassroomHandler.SendHomework(id, title, descr);
+            await ReplyAsync("Задание прикреплено");
+        }
+        
         [Command("connect")]
         [Alias("cnnnct", "update", "reconnect")]
         public async Task Connect()
